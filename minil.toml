@@ -1,0 +1,5 @@
+name = "CPAN-Mini-Server"
+# badges = ["travis"]
+module_maker="ModuleBuildTiny"
+static_install = "auto"
+
