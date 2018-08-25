@@ -1,20 +1,24 @@
 package CPAN::Mini::Server;
 
+# ABSTRACT Host a local CPAN mirror for I<DEVELOPMENT USE ONLY>
+
 use 5.010;
 use strict;
 use warnings;
 
-our $VERSION = "0.01";
+our $VERSION = "0.02";
 
 use Carp qw();
 use Mo qw(default builder is required);
 use Getopt::Long qw(GetOptionsFromArray);
+use Pod::Usage qw();
 
 local $SIG{__WARN__} = sub { die @_ };
 local $SIG{__DIE__}  = sub { Carp::confess @_ };
 
 has 'help'      => ( is => 'ro', default  => undef );
 has 'offline'   => ( is => 'ro', default  => undef );
+has 'verbose'   => ( is => 'ro', default  => undef );
 has 'port'      => ( is => 'ro', default  => 9999 );
 has 'interface' => ( is => 'ro', default  => 'localhost' );
 has 'cache_dir' => ( is => 'ro', default  => 'minicpan' );
@@ -34,19 +38,18 @@ sub _build_cpan_connector {
   );
 }
 
-# Make it so the http serevr can be replaced easily
+# Make it so the http server can be replaced easily
 has 'httpd' => ( default => sub { \&_default_httpd_server } );
 
 sub parse_params {
   my ( $self, @tokens ) = @_;
 
   my %params;
-  GetOptionsFromArray( \@tokens, \%params, 'help|?', 'offline|o', 'port|p=i',
-    'interface|i=s', 'cache_dir|d=s', 'mirror|m=s', );
-
-  $params{interface} //= 'localhost';
-  $params{port}      //= '9999';
-  $params{cache_dir} //= '.minicpan';
+  GetOptionsFromArray(
+    \@tokens,    \%params,   'help|?',        'offline|o',
+    'verbose|v', 'port|p=i', 'interface|i=s', 'cache_dir|d=s',
+    'mirror|m=s'
+  );
 
   my $command = $params{help} ? 'helpme' : shift @tokens // 'start';
 
@@ -57,24 +60,14 @@ sub parse_params {
 }
 
 sub helpme {
+  my ($self) = @_;
 
-  say <<'END';
-  Usage: cpanminiserver.pl [start|helpme] [OPTIONS]
-
-  Options:
-    [--mirror|-m]     <url>         * Mandatory *
-    [--cache_dir|-d]  <path>        # Default: ./minicpan
-    [--interface|-i]  <hostname|ip> # Default: localhost
-    [--port|-p]       <portnumber>  # Default: 9999
-    [--offline|-o]                  # Do not update local cache
-    [--help|-?]                     # show this helptext
-
-  Example: cpanminiserver.pl -h localhost -p 9999 -m http://example.com
-
-  To bind all interfaces use --interface or -i followed by ''
-  Example: cpanminiserver.pl -h '' -p 9999 -m http://example.com
-
-END
+  Pod::Usage::pod2usage(
+    exitval  => 'NOEXIT',
+    verbose  => $self->verbose ? 2 : 1,
+    sections => "NAME|SYNOPSIS|DESCRIPTION",
+    input    => __FILE__
+  );
 
   return '0 but true';
 }
@@ -152,39 +145,62 @@ __END__
 
 =head1 NAME
 
-CPAN::Mini::Server - Simple http server for hosting local cpan mirror
+CPAN::Mini::Server or minicpanserver.pl - Host a local CPAN mirror for I<DEVELOPMENT USE ONLY>
 
 =head1 SYNOPSIS
 
-Usage: cpanminiserver.pl [start|helpme] [OPTIONS]
+cpanminiserver.pl [start|helpme] [OPTIONS]
 
 Options:
-  [--mirror|-m]     <url>         * Mandatory *
-  [--cache_dir|-d]  <path>        # Default: ./minicpan
-  [--interface|-i]  <hostname|ip> # Default: localhost
-  [--port|-p]       <portnumber>  # Default: 9999
-  [--offline|-o]                  # Do not update local cache
-  [--help|-?]                     # show this helptext
 
-Example: cpanminiserver.pl -i localhost -p 9999 -m http://example.com
+  --mirror    [-m] <url>         * Mandatory *
+  --cache_dir [-d] <path>        # Default: ./minicpan
+  --interface [-i] <hostname|ip> # Default: localhost
+  --port      [-p] <portnumber>  # Default: 9999
+  --offline   [-o]               # Do not update local cache
+  --help      [-?]               # Show this helptext
+  --verbose   [-v]               # Show more extensive help text
 
-To bind all interfaces use --interface or -i followed by ''
-Example: cpanminiserver.pl -i '' -p 9999 -m http://example.com
+=head2 STEP-BY-STEP
 
-To find mirror to sync with go to:
-http://mirrors.cpan.org
+Find mirror to sync with, probably want to go here if you do not know about any:
 
-Then using the local server when installing with cpanm
+L<http://mirrors.cpan.org>
 
-  cpanm -m http://localhost:9999 Some::Module
+Relying on default to bind to localhost:
+
+cpanminiserver.pl -m http://example.com
+
+Thats it it! This should sync data from the mirror to F<./minicpan>
+and bind the server to L<http://localhost:9999>
+
+If you want to bind to all interfaces or a spesific one use the --interface or -i option:
+
+cpanminiserver.pl -m http://example.com -i ''
+
+To use the local server when installing with cpanm:
+
+cpanm -m http://localhost:9999 Some::Module
 
 =head1 DESCRIPTION
 
-Host your own CPAN repo locally.
+Host your own I<complete> CPAN repo locally and serve it locally via http for I<DEVELOPMENT PURPOSES ONLY>.
 
-Main use cases:
-  - Host your own full cpan repo locally to make it available when offline.
-  - Host your own repo to be a good citizen when using it heavily.
+Download the full repo (many gigabytes of data) from a chosen mirror
+and start a single process, single threaded non-forking webserver
+
+=head2 USE CASES
+
+=over 2
+
+=item Host your own I<full> cpan repo locally to make it available when offline.
+
+=item Host your own repo to be a good citizen when using it heavily.
+
+=item Run I<cpanm> commands while building a docker image and not copying the
+repo directory.
+
+=back
 
 When running the app first we will sync the mirror to the cache directory, then
 the built-in server will bind to the provided interface:port.
@@ -194,6 +210,15 @@ on the secondary run and beyond the sync process will be much faster as we only 
 outdated modules.
 
 See the CPAN::Mini module for more information
+
+=head1 DISCLAIMER
+
+This software is for development use only, do not not expose this to anything other than
+your local machine or your very small local network which you fully control.
+
+No effort has gone into making this secure, reliable or performant.
+
+I made this to make CPAN available via HTTP on my development machine while offline.
 
 =head1 LICENSE
 
