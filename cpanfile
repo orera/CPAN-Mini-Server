@@ -3,6 +3,7 @@ requires 'perl', '5.010';
 requires 'Mo';
 requires 'FindBin';
 requires 'Getopt::Long';
+requires 'Pod::Usage';
 
 requires 'CPAN::Mini';
 requires 'Data::Dumper';

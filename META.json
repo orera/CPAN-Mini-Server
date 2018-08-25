@@ -1,5 +1,5 @@
 {
-   "abstract" : "Simple http server for hosting local cpan mirror",
+   "abstract" : "Host a local CPAN mirror for I<DEVELOPMENT USE ONLY>",
    "author" : [
       "Tore Andersson <tore.andersson@gmail.com>"
    ],
@@ -49,6 +49,7 @@
             "HTTP::Daemon" : "0",
             "HTTP::Status" : "0",
             "Mo" : "0",
+            "Pod::Usage" : "0",
             "perl" : "5.010"
          }
       },
@@ -59,7 +60,7 @@
       }
    },
    "release_status" : "unstable",
-   "version" : "0.01",
+   "version" : "0.02",
    "x_serialization_backend" : "JSON::PP version 2.27400_02",
    "x_static_install" : 1
 }

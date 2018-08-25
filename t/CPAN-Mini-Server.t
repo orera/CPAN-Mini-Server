@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 use FindBin;
-use lib "$FindBin::Bin/../lib";
+use lib "$FindBin::Bin/../lib/";
 
 use Data::Dumper qw(Dumper);
 use Test::Most;
@@ -29,6 +29,7 @@ my ( $command, $p ) = $s->parse_params(
   split /\s+/, qq(
   --help
   --offline
+  --verbose
   --port      $example_port
   --interface $example_interface
   --cache_dir $example_folder
@@ -42,6 +43,7 @@ is $command, 'helpme', 'command is helpme';
   # Flags
   ok $p->{help},    'help is true';
   ok $p->{offline}, 'offline is true';
+  ok $p->{verbose}, 'verbose is true';
 
   # Settings
   is $p->{port},      $example_port,      "port is $example_port";
